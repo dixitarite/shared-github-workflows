@@ -1,0 +1,106 @@
+name: _Python Test and Build
+
+on:
+  workflow_call:
+    inputs:
+      python_version:
+        required: false
+        type: string
+        default: "3.10"
+      project_path:
+        required: false
+        type: string
+        default: "."
+      coverage_threshold:
+        required: false
+        type: string
+        default: "80"
+
+    secrets:
+      CODACY_PROJECT_TOKEN:
+        required: false
+
+jobs:
+  build:
+    name: Lint, Test, and Report for Python App
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ inputs.python_version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ inputs.python_version }}
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest flake8 coverage junit2html
+        working-directory: ${{ inputs.project_path }}
+
+      - name: Lint Code with flake8
+        run: |
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        working-directory: ${{ inputs.project_path }}
+
+      - name: Run Tests and Generate Coverage
+        run: |
+          mkdir -p test-results
+          coverage run -m pytest --junitxml=test-results/test-results.xml || true
+          coverage report
+          coverage html -d test-results/coverage-html
+        working-directory: ${{ inputs.project_path }}
+
+      - name: Convert JUnit XML to HTML
+        run: |
+          junit2html test-results/test-results.xml test-results/test-report.html
+        working-directory: ${{ inputs.project_path }}
+
+      - name: Enforce Coverage Threshold
+        run: |
+          TOTAL=$(coverage report | grep TOTAL | awk '{print $4}' | tr -d '%')
+          echo "Current coverage: $TOTAL%"
+          if (( TOTAL < ${{ inputs.coverage_threshold }} )); then
+            echo "Coverage $TOTAL% is below threshold ${{ inputs.coverage_threshold }}%"
+            exit 1
+          else
+            echo "Coverage is above threshold."
+          fi
+        working-directory: ${{ inputs.project_path }}
+
+      - name: Upload Coverage HTML
+        uses: actions/upload-artifact@v4
+        with:
+          name: Python-Coverage-HTML
+          path: ${{ inputs.project_path }}/test-results/coverage-html/
+
+      - name: Upload JUnit HTML Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: Python-JUnit-HTML
+          path: ${{ inputs.project_path }}/test-results/test-report.html
+
+      - name: Upload JUnit XML Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: Python-JUnit-XML
+          path: ${{ inputs.project_path }}/test-results/test-results.xml
+
+      - name: Upload Raw Coverage Data
+        uses: actions/upload-artifact@v4
+        with:
+          name: Python-Raw-Coverage
+          path: ${{ inputs.project_path }}/.coverage
+
+      - name: Upload Coverage to Codacy
+        if: ${{ secrets.CODACY_PROJECT_TOKEN != '' }}
+        run: |
+          curl -Ls https://coverage.codacy.com/get.sh > codacy-coverage-reporter
+          chmod +x codacy-coverage-reporter
+          ./codacy-coverage-reporter report \
+            --project-token="${{ secrets.CODACY_PROJECT_TOKEN }}" \
+            --coverage-reports="${{ inputs.project_path }}/.coverage"
+        working-directory: ${{ inputs.project_path }}
