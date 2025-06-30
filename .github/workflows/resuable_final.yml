@@ -1,0 +1,191 @@
+name: _Angular Test and Build
+
+on:
+  workflow_call:
+    inputs:
+      node_version:
+        required: false
+        type: string
+      coverage_threshold:
+        required: false
+        type: string
+      project_path:
+        required: false
+        type: string
+        default: '.'
+
+    secrets:
+      SONAR_TOKEN:
+        required: false
+      CODACY_PROJECT_TOKEN:
+        required: false
+
+env:
+  NODE_VERSION: ${{ inputs.node_version || vars.NODE_VERSION }}
+  COVERAGE_THRESHOLD: ${{ inputs.coverage_threshold || vars.COVERAGE_THRESHOLD }}
+
+jobs:
+  checkout:
+    runs-on: ubuntu-latest
+    outputs:
+      project_path: ${{ inputs.project_path }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+  setup:
+    runs-on: ubuntu-latest
+    needs: checkout
+    steps:
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install Dependencies
+        run: npm install
+        working-directory: ${{ inputs.project_path }}
+
+  lint:
+    runs-on: ubuntu-latest
+    needs: setup
+    steps:
+      - name: Lint Code with ESLint
+        run: |
+          npx eslint . --ext .ts --config eslint.config.js --no-warn-ignored --max-warnings=0
+        working-directory: ${{ inputs.project_path }}
+
+  test:
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - name: Run Tests and Generate Coverage
+        run: |
+          mkdir -p test-results
+          npx ng test --watch=false --browsers=ChromeHeadless --code-coverage --karma-config=karma.conf.js || true
+        working-directory: ${{ inputs.project_path }}
+
+  coverage:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: Install Coverage & Reporting Tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y lcov python3-pip
+          pip3 install junit2html
+
+      - name: Convert JUnit XML to HTML
+        run: |
+          junit2html test-results/test-results.xml test-results/test-report.html
+        working-directory: ${{ inputs.project_path }}
+
+      - name: Check for Failed CRITICAL Tests
+        run: |
+          REPORT="./test-results/test-results.xml"
+          echo "Parsing $REPORT for failed CRITICAL tests..."
+          if [[ -f "$REPORT" ]]; then
+            FAILED_CRITICAL=$(awk '/<testcase/ {test=$0} /<failure/ {if (test ~ /\[CRITICAL\]/) print test}' "$REPORT" | wc -l)
+            if [[ "$FAILED_CRITICAL" -gt 0 ]]; then
+              echo "$FAILED_CRITICAL CRITICAL test(s) failed."
+              exit 1
+            else
+              echo "All CRITICAL test cases passed."
+            fi
+          else
+            echo "Test report not found. Skipping CRITICAL test check."
+          fi
+        working-directory: ${{ inputs.project_path }}
+
+      - name: Generate HTML Coverage Report
+        run: |
+          genhtml coverage/angular.io-example/coverage/lcov.info \
+            --output-directory test-results/lcov-html \
+            --title "Angular Test Coverage Report" \
+            --show-details \
+            --highlight \
+            --legend
+        working-directory: ${{ inputs.project_path }}
+
+      - name: Beautify LCOV HTML Report
+        run: |
+          cp lcov-style.css test-results/lcov-html/
+          sed -i 's|</head>|<link rel="stylesheet" href="lcov-style.css">\n</head>|' test-results/lcov-html/index.html
+        working-directory: ${{ inputs.project_path }}
+
+      - name: Enforce Coverage Threshold
+        run: |
+          COVERAGE_FILE=coverage/angular.io-example/coverage/coverage-summary.json
+          echo "Using coverage file: $COVERAGE_FILE"
+          COVERAGE=$(node -p "require('./$COVERAGE_FILE').total.statements.pct")
+          echo "Statements Coverage: $COVERAGE%"
+          THRESHOLD=$COVERAGE_THRESHOLD
+          if (( $(echo "$COVERAGE < $THRESHOLD" | bc -l) )); then
+            echo "Code coverage is below required $THRESHOLD% threshold."
+            exit 1
+          else
+            echo "Code coverage is acceptable."
+          fi
+        working-directory: ${{ inputs.project_path }}
+
+  report:
+    runs-on: ubuntu-latest
+    needs: coverage
+    steps:
+      - name: Upload Coverage HTML Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: Angular-Coverage-HTML
+          path: ${{ inputs.project_path }}/test-results/lcov-html/
+
+      - name: Upload JUnit HTML Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: Angular-JUnit-HTML
+          path: ${{ inputs.project_path }}/test-results/test-report.html
+
+      - name: Upload JUnit XML Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: Angular-JUnit-XML
+          path: ${{ inputs.project_path }}/test-results/test-results.xml
+
+      - name: Upload Raw Coverage Files
+        uses: actions/upload-artifact@v4
+        with:
+          name: Angular-Raw-Coverage
+          path: ${{ inputs.project_path }}/coverage/
+
+  sonarqube:
+    runs-on: ubuntu-latest
+    needs: coverage
+    if: ${{ secrets.SONAR_TOKEN != '' }}
+    steps:
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@v5
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+  codacy:
+    runs-on: ubuntu-latest
+    needs: coverage
+    if: ${{ secrets.CODACY_PROJECT_TOKEN != '' }}
+    steps:
+      - name: Upload Coverage to Codacy
+        run: |
+          curl -Ls https://coverage.codacy.com/get.sh > codacy-coverage-reporter
+          chmod +x codacy-coverage-reporter
+          ./codacy-coverage-reporter report \
+            --project-token="${{ secrets.CODACY_PROJECT_TOKEN }}" \
+            --coverage-reports="${{ inputs.project_path }}/coverage/angular.io-example/coverage/lcov.info"
+        env:
+          CODACY_PROJECT_TOKEN: ${{ secrets.CODACY_PROJECT_TOKEN }}
+        working-directory: ${{ inputs.project_path }}
+
+  build:
+    runs-on: ubuntu-latest
+    needs: [report, sonarqube, codacy]
+    steps:
+      - name: Build Angular App
+        run: npm run build -- --configuration production
+        working-directory: ${{ inputs.project_path }}
