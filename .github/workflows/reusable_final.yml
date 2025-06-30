@@ -46,6 +46,7 @@ jobs:
 
       - name: Install Dependencies
         run: npm install
+             npm install --save-dev @eslint/js
         working-directory: ${{ inputs.project_path }}
 
   lint:
