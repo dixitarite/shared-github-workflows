@@ -13,6 +13,14 @@ on:
         required: false
         type: string
         default: '.'
+      run_sonarqube:
+        required: false
+        type: boolean
+        default: false
+      run_codacy:
+        required: false
+        type: boolean
+        default: false
 
     secrets:
       SONAR_TOKEN:
@@ -159,7 +167,7 @@ jobs:
   sonarqube:
     runs-on: ubuntu-latest
     needs: coverage
-    if: ${{ secrets.SONAR_TOKEN != '' }}
+    if: ${{ inputs.run_sonarqube }}
     steps:
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v5
@@ -169,7 +177,7 @@ jobs:
   codacy:
     runs-on: ubuntu-latest
     needs: coverage
-    if: ${{ secrets.CODACY_PROJECT_TOKEN != '' }}
+    if: ${{ inputs.run_codacy }}
     steps:
       - name: Upload Coverage to Codacy
         run: |
