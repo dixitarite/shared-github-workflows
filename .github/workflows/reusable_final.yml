@@ -159,7 +159,7 @@ jobs:
   sonarqube:
     runs-on: ubuntu-latest
     needs: coverage
-    if: ${{ secrets.SONAR_TOKEN != '' }}
+    if: ${{ env.SONAR_TOKEN != '' }}
     steps:
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v5
@@ -169,14 +169,14 @@ jobs:
   codacy:
     runs-on: ubuntu-latest
     needs: coverage
-    if: ${{ secrets.CODACY_PROJECT_TOKEN != '' }}
+    if: ${{ env.CODACY_PROJECT_TOKEN != '' }}
     steps:
       - name: Upload Coverage to Codacy
         run: |
           curl -Ls https://coverage.codacy.com/get.sh > codacy-coverage-reporter
           chmod +x codacy-coverage-reporter
           ./codacy-coverage-reporter report \
-            --project-token="${{ secrets.CODACY_PROJECT_TOKEN }}" \
+            --project-token="${{ env.CODACY_PROJECT_TOKEN }}" \
             --coverage-reports="${{ inputs.project_path }}/coverage/angular.io-example/coverage/lcov.info"
         env:
           CODACY_PROJECT_TOKEN: ${{ secrets.CODACY_PROJECT_TOKEN }}
