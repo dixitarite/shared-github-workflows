@@ -57,7 +57,7 @@ jobs:
 
       - name: Lint Code with ESLint
         run: |
-          npx eslint . --ext .ts --max-warnings=0
+          npx eslint . --ext .ts,.html --max-warnings=0
         working-directory: ${{ inputs.project_path }}
 
   test:
