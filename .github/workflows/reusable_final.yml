@@ -13,12 +13,12 @@ on:
         required: false
         type: string
         default: '.'
-
-    secrets:
       SONAR_TOKEN:
         required: false
+        type: string
       CODACY_PROJECT_TOKEN:
         required: false
+        type: string
 
 jobs:
   setup:
@@ -165,7 +165,7 @@ jobs:
   sonar:
     name: SonarQube Scan
     runs-on: ubuntu-latest
-    if: ${{ secrets.SONAR_TOKEN != '' }}
+    if: ${{ inputs.SONAR_TOKEN != '' }}
     needs: coverage
     steps:
       - name: Checkout Code
@@ -174,12 +174,12 @@ jobs:
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v5
         env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_TOKEN: ${{ inputs.SONAR_TOKEN }}
 
   codacy:
     name: Upload Coverage to Codacy
     runs-on: ubuntu-latest
-    if: ${{ secrets.CODACY_PROJECT_TOKEN != '' }}
+    if: ${{ inputs.CODACY_PROJECT_TOKEN != '' }}
     needs: coverage
     steps:
       - name: Checkout Code
@@ -190,7 +190,7 @@ jobs:
           curl -Ls https://coverage.codacy.com/get.sh > codacy-coverage-reporter
           chmod +x codacy-coverage-reporter
           ./codacy-coverage-reporter report \
-            --project-token="${{ secrets.CODACY_PROJECT_TOKEN }}" \
+            --project-token="${{ inputs.CODACY_PROJECT_TOKEN }}" \
             --coverage-reports="${{ inputs.project_path }}/coverage/angular.io-example/coverage/lcov.info"
         working-directory: ${{ inputs.project_path }}
 
