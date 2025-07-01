@@ -13,89 +13,76 @@ on:
         required: false
         type: string
         default: '.'
-      run_sonarqube:
-        required: false
-        type: boolean
-        default: false
-      run_codacy:
-        required: false
-        type: boolean
-        default: false
+
     secrets:
       SONAR_TOKEN:
         required: false
       CODACY_PROJECT_TOKEN:
         required: false
 
-env:
-  NODE_VERSION: ${{ inputs.node_version || vars.NODE_VERSION }}
-  COVERAGE_THRESHOLD: ${{ inputs.coverage_threshold || vars.COVERAGE_THRESHOLD }}
-
 jobs:
   setup:
+    name: Setup & Install Dependencies
     runs-on: ubuntu-latest
+    outputs:
+      node_version: ${{ steps.setvars.outputs.node_version }}
     steps:
-      - name: Checkout Repository
+      - name: Checkout Code
         uses: actions/checkout@v4
+
+      - name: Set Env Vars
+        id: setvars
+        run: |
+          echo "node_version=${{ inputs.node_version || vars.NODE_VERSION }}" >> $GITHUB_OUTPUT
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version: ${{ steps.setvars.outputs.node_version }}
 
       - name: Install Dependencies
-        run: |
-          npm install
-          npm install --save-dev eslint@9.3.0 @eslint/js@9.3.0
+        run: npm install
         working-directory: ${{ inputs.project_path }}
 
   lint:
+    name: Lint Angular Code
     runs-on: ubuntu-latest
     needs: setup
     steps:
-      - name: Checkout Repository
+      - name: Checkout Code
         uses: actions/checkout@v4
 
       - name: Lint Code with ESLint
-        run: |
-          npx eslint . --ext .ts --config eslint.config.js --no-warn-ignored --max-warnings=0
+        run: npx eslint . --ext .ts --config eslint.config.js --no-warn-ignored --max-warnings=0
         working-directory: ${{ inputs.project_path }}
 
   test:
+    name: Run Tests & Generate Coverage
     runs-on: ubuntu-latest
-    needs: lint
+    needs: setup
     steps:
-      - name: Checkout Repository
+      - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Run Tests and Generate Coverage
+      - name: Run Tests
         run: |
           mkdir -p test-results
           npx ng test --watch=false --browsers=ChromeHeadless --code-coverage --karma-config=karma.conf.js || true
         working-directory: ${{ inputs.project_path }}
 
-  coverage:
-    runs-on: ubuntu-latest
-    needs: test
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Install Coverage & Reporting Tools
+      - name: Install Coverage Tools
         run: |
           sudo apt-get update
           sudo apt-get install -y lcov python3-pip
           pip3 install junit2html
 
       - name: Convert JUnit XML to HTML
-        run: |
-          junit2html test-results/test-results.xml test-results/test-report.html
+        run: junit2html test-results/test-results.xml test-results/test-report.html
         working-directory: ${{ inputs.project_path }}
 
-      - name: Check for Failed CRITICAL Tests
+      - name: Check CRITICAL Test Failures
         run: |
           REPORT="./test-results/test-results.xml"
-          echo "Parsing $REPORT for failed CRITICAL tests..."
           if [[ -f "$REPORT" ]]; then
             FAILED_CRITICAL=$(awk '/<testcase/ {test=$0} /<failure/ {if (test ~ /\[CRITICAL\]/) print test}' "$REPORT" | wc -l)
             if [[ "$FAILED_CRITICAL" -gt 0 ]]; then
@@ -105,9 +92,17 @@ jobs:
               echo "All CRITICAL test cases passed."
             fi
           else
-            echo "Test report not found. Skipping CRITICAL test check."
+            echo "Test report not found."
           fi
         working-directory: ${{ inputs.project_path }}
+
+  coverage:
+    name: Enforce Coverage Threshold & Report
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
       - name: Generate HTML Coverage Report
         run: |
@@ -119,7 +114,7 @@ jobs:
             --legend
         working-directory: ${{ inputs.project_path }}
 
-      - name: Beautify LCOV HTML Report
+      - name: Beautify LCOV HTML
         run: |
           cp lcov-style.css test-results/lcov-html/
           sed -i 's|</head>|<link rel="stylesheet" href="lcov-style.css">\n</head>|' test-results/lcov-html/index.html
@@ -127,56 +122,53 @@ jobs:
 
       - name: Enforce Coverage Threshold
         run: |
-          COVERAGE_FILE=coverage/angular.io-example/coverage/coverage-summary.json
-          echo "Using coverage file: $COVERAGE_FILE"
-          COVERAGE=$(node -p "require('./$COVERAGE_FILE').total.statements.pct")
-          echo "Statements Coverage: $COVERAGE%"
-          THRESHOLD=$COVERAGE_THRESHOLD
-          if (( $(echo "$COVERAGE < $THRESHOLD" | bc -l) )); then
-            echo "Code coverage is below required $THRESHOLD% threshold."
+          FILE=coverage/angular.io-example/coverage/coverage-summary.json
+          PCT=$(node -p "require('./$FILE').total.statements.pct")
+          echo "Statements Coverage: $PCT%"
+          if (( $(echo "$PCT < $COVERAGE_THRESHOLD" | bc -l) )); then
+            echo "Coverage $PCT% below threshold $COVERAGE_THRESHOLD%"
             exit 1
-          else
-            echo "Code coverage is acceptable."
           fi
+        env:
+          COVERAGE_THRESHOLD: ${{ inputs.coverage_threshold || vars.COVERAGE_THRESHOLD }}
         working-directory: ${{ inputs.project_path }}
 
   report:
+    name: Upload Reports
     runs-on: ubuntu-latest
-    needs: coverage
+    needs: [test, coverage]
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Upload Coverage HTML Report
+      - name: Upload Coverage HTML
         uses: actions/upload-artifact@v4
         with:
           name: Angular-Coverage-HTML
           path: ${{ inputs.project_path }}/test-results/lcov-html/
 
-      - name: Upload JUnit HTML Report
+      - name: Upload JUnit HTML
         uses: actions/upload-artifact@v4
         with:
           name: Angular-JUnit-HTML
           path: ${{ inputs.project_path }}/test-results/test-report.html
 
-      - name: Upload JUnit XML Report
+      - name: Upload JUnit XML
         uses: actions/upload-artifact@v4
         with:
           name: Angular-JUnit-XML
           path: ${{ inputs.project_path }}/test-results/test-results.xml
 
-      - name: Upload Raw Coverage Files
+      - name: Upload Raw Coverage
         uses: actions/upload-artifact@v4
         with:
           name: Angular-Raw-Coverage
           path: ${{ inputs.project_path }}/coverage/
 
-  sonarqube:
+  sonar:
+    name: SonarQube Scan
     runs-on: ubuntu-latest
+    if: ${{ secrets.SONAR_TOKEN != '' }}
     needs: coverage
-    if: ${{ inputs.run_sonarqube }}
     steps:
-      - name: Checkout Repository
+      - name: Checkout Code
         uses: actions/checkout@v4
 
       - name: SonarQube Scan
@@ -185,11 +177,12 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
   codacy:
+    name: Upload Coverage to Codacy
     runs-on: ubuntu-latest
+    if: ${{ secrets.CODACY_PROJECT_TOKEN != '' }}
     needs: coverage
-    if: ${{ inputs.run_codacy }}
     steps:
-      - name: Checkout Repository
+      - name: Checkout Code
         uses: actions/checkout@v4
 
       - name: Upload Coverage to Codacy
@@ -199,15 +192,14 @@ jobs:
           ./codacy-coverage-reporter report \
             --project-token="${{ secrets.CODACY_PROJECT_TOKEN }}" \
             --coverage-reports="${{ inputs.project_path }}/coverage/angular.io-example/coverage/lcov.info"
-        env:
-          CODACY_PROJECT_TOKEN: ${{ secrets.CODACY_PROJECT_TOKEN }}
         working-directory: ${{ inputs.project_path }}
 
   build:
+    name: Build Angular App
     runs-on: ubuntu-latest
-    needs: [report, sonarqube, codacy]
+    needs: [lint, test]
     steps:
-      - name: Checkout Repository
+      - name: Checkout Code
         uses: actions/checkout@v4
 
       - name: Build Angular App
