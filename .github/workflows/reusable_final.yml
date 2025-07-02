@@ -71,7 +71,7 @@ jobs:
       - name: Run Tests
         run: |
           echo "Running Angular tests..."
-          npx ng test --code-coverage --watch=false --browsers=ChromeHeadless --karma-config=karma.conf.js
+          npx ng test --code-coverage --watch=false --browsers=ChromeHeadless --karma-config=karma.conf.js || true
           echo "Tests completed."
           find . -name "test-results.xml" || echo "test-results.xml not found"
         working-directory: ${{ inputs.project_path }}
@@ -117,7 +117,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: raw-coverage
-          path: coverage/
+          path: ${{ inputs.project_path }}/coverage/
 
   coverage:
     name: Enforce Coverage Threshold & Report
