@@ -127,6 +127,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node_version || vars.NODE_VERSION }}
+
+      - name: Install Dependencies
+        run: npm install
+        working-directory: ${{ inputs.project_path }}
+
+      - name: Re-run ng test for coverage if needed
+        run: |
+          echo "🔁 Re-running Angular tests to regenerate coverage..."
+          npx ng test --code-coverage --watch=false --browsers=ChromeHeadless --karma-config=karma.conf.js || true
+        working-directory: ${{ inputs.project_path }}
+        
       - name: Install lcov
         run: |
           sudo apt-get update
