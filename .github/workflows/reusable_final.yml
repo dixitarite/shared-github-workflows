@@ -87,9 +87,24 @@ jobs:
           sudo apt-get install -y lcov python3-pip
           pip3 install junit2html
 
+      - name: 🔍 Debug: List contents of test-results
+        run: |
+          echo "Working directory: $(pwd)"
+          echo "Checking contents of test-results folder:"
+          find test-results || echo "❌ test-results folder not found"
+          echo "Checking for test-results/test-results.xml:"
+          if [ -f "test-results/test-results.xml" ]; then
+            echo "✅ test-results.xml FOUND"
+          else
+            echo "::error::❌ test-results.xml NOT FOUND"
+          fi
+        working-directory: ${{ inputs.project_path }}
+
       - name: Convert JUnit XML to HTML (if exists)
         run: |
+          echo "🔄 Converting JUnit XML to HTML..."
           if [ -f "test-results/test-results.xml" ]; then
+            echo "✅ File exists. Converting now..."
             junit2html test-results/test-results.xml test-results/test-report.html
           else
             echo "::warning::JUnit XML file not found. Skipping HTML conversion."
