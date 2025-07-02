@@ -117,7 +117,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: raw-coverage
-          path: ${{ inputs.project_path }}/coverage/angular.io-example/
+          path: ${{ inputs.project_path }}/coverage/
 
   coverage:
     name: Enforce Coverage Threshold & Report
@@ -145,7 +145,7 @@ jobs:
 
       - name: Generate HTML Coverage Report
         run: |
-          genhtml ./coverage/angular.io-example/lcov.info \
+          genhtml ./coverage/lcov.info \
             --output-directory test-results/lcov-html \
             --title "Angular Test Coverage Report" \
             --show-details \
@@ -161,7 +161,7 @@ jobs:
 
       - name: Enforce Coverage Threshold
         run: |
-          FILE=coverage/angular.io-example/coverage-summary.json
+          FILE=coverage/coverage-summary.json
           echo "Looking for $FILE"
           if [[ -f "$FILE" ]]; then
             PCT=$(node -p "require('./$FILE').total.statements.pct")
