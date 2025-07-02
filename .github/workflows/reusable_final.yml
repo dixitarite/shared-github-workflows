@@ -130,7 +130,7 @@ jobs:
         run: |
           echo "Looking for LCOV file..."
           find coverage -name "*.info" || echo "Not found"
-          genhtml coverage/lcov.info \
+          genhtml coverage/angular.io-example/coverage/lcov.info \
             --output-directory test-results/lcov-html \
             --title "Angular Test Coverage Report" \
             --show-details \
