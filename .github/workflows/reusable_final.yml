@@ -145,7 +145,7 @@ jobs:
 
       - name: Generate HTML Coverage Report
         run: |
-          genhtml ./coverage/lcov.info \
+          genhtml ./coverage/angular.io-example/lcov.info \
             --output-directory test-results/lcov-html \
             --title "Angular Test Coverage Report" \
             --show-details \
@@ -161,7 +161,7 @@ jobs:
 
       - name: Enforce Coverage Threshold
         run: |
-          FILE=coverage/coverage-summary.json
+          FILE=coverage/angular.io-example/coverage-summary.json
           echo "Looking for $FILE"
           if [[ -f "$FILE" ]]; then
             PCT=$(node -p "require('./$FILE').total.statements.pct")
