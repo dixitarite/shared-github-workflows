@@ -230,7 +230,7 @@ jobs:
             chmod +x codacy-coverage-reporter
             ./codacy-coverage-reporter report \
               --project-token="${{ secrets.CODACY_PROJECT_TOKEN }}" \
-              --coverage-reports="${{ inputs.project_path }}/coverage/lcov.info"
+              --coverage-reports="${{ inputs.project_path }}/coverage/angular.io-example/lcov.info"
           else
             echo "::warning::No CODACY_PROJECT_TOKEN set. Skipping Codacy upload."
           fi
