@@ -39,6 +39,12 @@ jobs:
         with:
           node-version: ${{ steps.setvars.outputs.node_version }}
 
+      - name: Cache node modules
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+
       - name: Install Dependencies
         run: npm install
         working-directory: ${{ inputs.project_path }}
@@ -51,8 +57,23 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ needs.setup.outputs.node_version }}
+
+      - name: Cache node modules
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+
+      - name: Install Dependencies
+        run: npm install
+        working-directory: ${{ inputs.project_path }}
+
       - name: Lint Code with ESLint
-        run: npx eslint . --ext .ts --config eslint.config.cjs --no-warn-ignored --max-warnings=0
+        run: npm run lint
         working-directory: ${{ inputs.project_path }}
 
   test:
