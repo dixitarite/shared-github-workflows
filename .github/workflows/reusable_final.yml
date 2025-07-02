@@ -230,6 +230,15 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ needs.setup.outputs.node_version }}
+
+      - name: Install Dependencies
+        run: npm install
+        working-directory: ${{ inputs.project_path }}
+
       - name: Build Angular App
-        run: npm run build -- --configuration production
+        run: npx ng build --configuration production
         working-directory: ${{ inputs.project_path }}
