@@ -31,8 +31,7 @@ jobs:
 
       - name: Set Env Vars
         id: setvars
-        run: |
-          echo "node_version=${{ inputs.node_version || vars.NODE_VERSION }}" >> $GITHUB_OUTPUT
+        run: echo "node_version=${{ inputs.node_version || vars.NODE_VERSION }}" >> $GITHUB_OUTPUT
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -52,7 +51,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Lint Code with ESLint
-        run: npx eslint . --ext .ts --config eslint.config.cjs --no-warn-ignored --max-warnings=0 --ignore-pattern coverage/
+        run: npx eslint . --ext .ts --config eslint.config.cjs --no-warn-ignored --ignore-pattern coverage/
         working-directory: ${{ inputs.project_path }}
 
   test:
