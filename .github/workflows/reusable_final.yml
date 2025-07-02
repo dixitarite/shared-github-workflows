@@ -71,7 +71,7 @@ jobs:
       - name: Run Tests
         run: |
           echo "Running Angular tests..."
-          npx ng test --watch=false --browsers=ChromeHeadless --code-coverage --karma-config=karma.conf.js || true
+          npx ng test --watch=false --browsers=ChromeHeadless --karma-config=karma.conf.js || true
           echo "Tests completed."
           find . -name "test-results.xml" || echo "test-results.xml not found"
         working-directory: ${{ inputs.project_path }}
@@ -145,7 +145,7 @@ jobs:
 
       - name: Generate HTML Coverage Report
         run: |
-          genhtml coverage/lcov.info \
+          genhtml ./coverage/lcov.info \
             --output-directory test-results/lcov-html \
             --title "Angular Test Coverage Report" \
             --show-details \
@@ -230,7 +230,7 @@ jobs:
             chmod +x codacy-coverage-reporter
             ./codacy-coverage-reporter report \
               --project-token="${{ secrets.CODACY_PROJECT_TOKEN }}" \
-              --coverage-reports="${{ inputs.project_path }}/coverage/angular.io-example/coverage/lcov.info"
+              --coverage-reports="${{ inputs.project_path }}/coverage/lcov.info"
           else
             echo "::warning::No CODACY_PROJECT_TOKEN set. Skipping Codacy upload."
           fi
