@@ -13,12 +13,11 @@ on:
         required: false
         type: string
         default: '.'
+    secrets:
       SONAR_TOKEN:
         required: false
-        type: string
       CODACY_PROJECT_TOKEN:
         required: false
-        type: string
 
 jobs:
   setup:
@@ -165,33 +164,40 @@ jobs:
   sonar:
     name: SonarQube Scan
     runs-on: ubuntu-latest
-    if: ${{ inputs.SONAR_TOKEN != '' }}
     needs: coverage
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: SonarQube Scan
-        uses: SonarSource/sonarqube-scan-action@v5
-        env:
-          SONAR_TOKEN: ${{ inputs.SONAR_TOKEN }}
+      - name: Conditional Sonar Scan
+        run: |
+          if [ -n "${{ secrets.SONAR_TOKEN }}" ]; then
+            echo "Running SonarQube scan..."
+            sonar-scanner -Dsonar.login="${{ secrets.SONAR_TOKEN }}"
+          else
+            echo "No SONAR_TOKEN set. Skipping scan."
+          fi
 
   codacy:
     name: Upload Coverage to Codacy
     runs-on: ubuntu-latest
-    if: ${{ inputs.CODACY_PROJECT_TOKEN != '' }}
     needs: coverage
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Upload Coverage to Codacy
+      - name: Conditional Codacy Upload
         run: |
-          curl -Ls https://coverage.codacy.com/get.sh > codacy-coverage-reporter
-          chmod +x codacy-coverage-reporter
-          ./codacy-coverage-reporter report \
-            --project-token="${{ inputs.CODACY_PROJECT_TOKEN }}" \
-            --coverage-reports="${{ inputs.project_path }}/coverage/angular.io-example/coverage/lcov.info"
+          if [ -n "${{ secrets.CODACY_PROJECT_TOKEN }}" ]; then
+            echo "Uploading coverage to Codacy..."
+            curl -Ls https://coverage.codacy.com/get.sh > codacy-coverage-reporter
+            chmod +x codacy-coverage-reporter
+            ./codacy-coverage-reporter report \
+              --project-token="${{ secrets.CODACY_PROJECT_TOKEN }}" \
+              --coverage-reports="${{ inputs.project_path }}/coverage/angular.io-example/coverage/lcov.info"
+          else
+            echo "No CODACY_PROJECT_TOKEN set. Skipping Codacy upload."
+          fi
         working-directory: ${{ inputs.project_path }}
 
   build:
