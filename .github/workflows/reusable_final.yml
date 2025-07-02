@@ -90,10 +90,10 @@ jobs:
       - name: Convert JUnit XML to HTML
         run: |
           if [ -f "./test-results/test-results.xml" ]; then
-            echo "✅ Found test-results.xml. Converting to HTML..."
+            echo "Found test-results.xml. Converting to HTML..."
             junit2html ./test-results/test-results.xml ./test-results/test-report.html
           else
-            echo "::warning::❌ test-results.xml not found at ./test-results. Skipping HTML conversion."
+            echo "::warning::test-results.xml not found at ./test-results. Skipping HTML conversion."
             ls -la ./test-results || echo "Directory test-results not found"
           fi
         working-directory: ${{ inputs.project_path }}
@@ -107,18 +107,12 @@ jobs:
               echo "$FAILED_CRITICAL CRITICAL test(s) failed."
               exit 1
             else
-              echo "✅ All CRITICAL test cases passed."
+              echo "All CRITICAL test cases passed."
             fi
           else
             echo "::warning::Test report not found at $REPORT"
           fi
         working-directory: ${{ inputs.project_path }}
-
-      - name: Upload Coverage Directory
-        uses: actions/upload-artifact@v4
-        with:
-          name: raw-coverage
-          path: ${{ inputs.project_path }}/coverage/
 
       - name: Upload JUnit XML Report
         uses: actions/upload-artifact@v4
@@ -217,33 +211,6 @@ jobs:
         with:
           name: Angular-Coverage-HTML
           path: ${{ inputs.project_path }}/test-results/lcov-html/
-
-
-
-  report:
-    name: Upload Reports
-    runs-on: ubuntu-latest
-    needs: [test, coverage]
-    steps:
-      - uses: actions/upload-artifact@v4
-        with:
-          name: Angular-Coverage-HTML
-          path: ${{ inputs.project_path }}/test-results/lcov-html/
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: Angular-JUnit-HTML
-          path: ${{ inputs.project_path }}/test-results/test-report.html
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: Angular-JUnit-XML
-          path: ${{ inputs.project_path }}/test-results/test-results.xml
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: Angular-Raw-Coverage
-          path: ${{ inputs.project_path }}/coverage/
 
   sonar:
     name: SonarQube Scan
