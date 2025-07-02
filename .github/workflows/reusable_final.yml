@@ -238,10 +238,15 @@ jobs:
         run: |
           if [ -n "${{ secrets.SONAR_TOKEN }}" ]; then
             echo "🔍 Running SonarQube scan..."
-            sonar-scanner -Dsonar.login="${{ secrets.SONAR_TOKEN }}"
+            sonar-scanner \
+              -Dsonar.projectKey=your_project_key \
+              -Dsonar.sources=. \
+              -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }} \
+              -Dsonar.login=${{ secrets.SONAR_TOKEN }}
           else
             echo "::warning::No SONAR_TOKEN set. Skipping scan."
           fi
+
 
 
   codacy:
