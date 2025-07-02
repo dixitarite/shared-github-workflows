@@ -239,10 +239,8 @@ jobs:
           if [ -n "${{ secrets.SONAR_TOKEN }}" ]; then
             echo "🔍 Running SonarQube scan..."
             sonar-scanner \
-              -Dsonar.projectKey=your_project_key \
-              -Dsonar.sources=. \
-              -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }} \
-              -Dsonar.login=${{ secrets.SONAR_TOKEN }}
+              -Dsonar.login=${{ secrets.SONAR_TOKEN }} \
+              -Dsonar.host.url=https://sonarcloud.io
           else
             echo "::warning::No SONAR_TOKEN set. Skipping scan."
           fi
