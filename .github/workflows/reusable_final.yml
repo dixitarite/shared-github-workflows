@@ -117,7 +117,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: raw-coverage
-          path: ${{ inputs.project_path }}/coverage/
+          path: ${{ inputs.project_path }}/coverage/angular.io-example/
 
   coverage:
     name: Enforce Coverage Threshold & Report
