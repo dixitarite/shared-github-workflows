@@ -71,7 +71,7 @@ jobs:
       - name: Run Tests
         run: |
           echo "Running Angular tests..."
-          npx ng test --code-coverage --watch=false
+          npx ng test --code-coverage --watch=false --browsers=ChromeHeadless --karma-config=karma.conf.js
           echo "Tests completed."
           find . -name "test-results.xml" || echo "test-results.xml not found"
         working-directory: ${{ inputs.project_path }}
