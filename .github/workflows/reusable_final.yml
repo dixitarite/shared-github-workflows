@@ -52,7 +52,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Lint Code with ESLint
-        run: npx eslint . --ext .ts --config eslint.config.js --no-warn-ignored --max-warnings=0
+        run: npx eslint . --ext .ts --config eslint.config.cjs --no-warn-ignored --max-warnings=0
         working-directory: ${{ inputs.project_path }}
 
   test:
