@@ -120,6 +120,11 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      - name: Install lcov
+        run: |
+            sudo apt-get update
+            sudo apt-get install -y lcov
+        
       - name: Generate HTML Coverage Report
         run: |
           genhtml coverage/angular.io-example/coverage/lcov.info \
