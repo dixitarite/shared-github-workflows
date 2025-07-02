@@ -76,16 +76,19 @@ jobs:
           find . -name "test-results.xml" || echo "test-results.xml not found"
         working-directory: ${{ inputs.project_path }}
      
-      - name: DEBUG — Show coverage directory contents
+      - name: DEBUG — Show coverage location
         run: |
-          echo "📁 Listing contents of ./coverage"
-          ls -R coverage || echo "❌ coverage directory not found or empty"
-      
-          echo "🔍 Searching for lcov.info..."
-          find . -type f -name "lcov.info" || echo "❌ lcov.info not found"
-      
-          echo "📄 Searching for coverage-summary.json..."
-          find . -type f -name "coverage-summary.json" || echo "❌ coverage-summary.json not found"
+          echo "📁 Root coverage directory:"
+          ls -la coverage || echo "❌ coverage/ not found"
+
+          echo "📁 Listing nested folders in coverage/"
+          find coverage -type d || echo "❌ no directories found inside coverage"
+
+          echo "🔍 Searching for lcov.info"
+          find coverage -name lcov.info || echo "❌ lcov.info not found"
+
+          echo "🔍 Searching for coverage-summary.json"
+          find coverage -name coverage-summary.json || echo "❌ coverage-summary.json not found"
         working-directory: ${{ inputs.project_path }}
 
 
@@ -130,7 +133,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: raw-coverage
-          path: ${{ inputs.project_path }}/coverage/
+          path: ${{ inputs.project_path }}/coverage/**/
 
   coverage:
     name: Enforce Coverage Threshold & Report
@@ -150,10 +153,15 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y lcov
 
-      - name: Debug Coverage Paths
+      - name: DEBUG — Find coverage path and files
         run: |
-          echo "🔎 Listing files inside coverage directory:"
-          find coverage -type f || echo "coverage directory not found"
+          echo "🔎 Listing everything in ./coverage:"
+          find coverage -type f
+
+          export COVERAGE_FILE=$(find coverage -name lcov.info | head -n 1)
+          export SUMMARY_FILE=$(find coverage -name coverage-summary.json | head -n 1)
+          echo "🧪 lcov.info = $COVERAGE_FILE"
+          echo "🧪 coverage-summary.json = $SUMMARY_FILE"
         working-directory: ${{ inputs.project_path }}
 
       - name: Generate HTML Coverage Report
