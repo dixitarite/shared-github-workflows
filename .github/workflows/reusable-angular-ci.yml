@@ -51,6 +51,8 @@ jobs:
         run: |
           mkdir -p test-results
           npx ng test --watch=false --browsers=ChromeHeadless --code-coverage --karma-config=karma.conf.js || true
+          echo "✅ Coverage files after test run:"
+          find coverage -type f
         working-directory: ${{ inputs.project_path }}
 
       - name: Install Coverage & Reporting Tools
@@ -61,7 +63,7 @@ jobs:
 
       - name: Convert JUnit XML to HTML
         run: |
-          junit2html test-results/test-results.xml test-results/test-report.html
+          junit2html test-results/test-results.xml test-results/test-report.html || echo "JUnit XML not found"
         working-directory: ${{ inputs.project_path }}
 
       - name: Check for Failed CRITICAL Tests
@@ -83,7 +85,7 @@ jobs:
 
       - name: Generate HTML Coverage Report
         run: |
-          genhtml coverage/angular.io-example/coverage/lcov.info \
+          genhtml coverage/lcov.info \
             --output-directory test-results/lcov-html \
             --title "Angular Test Coverage Report" \
             --show-details \
@@ -93,26 +95,31 @@ jobs:
 
       - name: Beautify LCOV HTML Report
         run: |
-          cp lcov-style.css test-results/lcov-html/
+          cp lcov-style.css test-results/lcov-html/ || echo "lcov-style.css not found"
           sed -i 's|</head>|<link rel="stylesheet" href="lcov-style.css">\n</head>|' test-results/lcov-html/index.html
         working-directory: ${{ inputs.project_path }}
 
       - name: Enforce Coverage Threshold
         run: |
-          COVERAGE_FILE=coverage/angular.io-example/coverage/coverage-summary.json
+          COVERAGE_FILE=coverage/coverage-summary.json
           echo "Using coverage file: $COVERAGE_FILE"
-          COVERAGE=$(node -p "require('./$COVERAGE_FILE').total.statements.pct")
-          echo "Statements Coverage: $COVERAGE%"
-          THRESHOLD=$COVERAGE_THRESHOLD
-          if (( $(echo "$COVERAGE < $THRESHOLD" | bc -l) )); then
-            echo "Code coverage is below required $THRESHOLD% threshold."
-            exit 1
+          if [[ -f "$COVERAGE_FILE" ]]; then
+            COVERAGE=$(node -p "require('./$COVERAGE_FILE').total.statements.pct")
+            echo "Statements Coverage: $COVERAGE%"
+            THRESHOLD=$COVERAGE_THRESHOLD
+            if (( $(echo "$COVERAGE < $THRESHOLD" | bc -l) )); then
+              echo "❌ Code coverage is below required $THRESHOLD% threshold."
+              exit 1
+            else
+              echo "✅ Code coverage is acceptable."
+            fi
           else
-            echo "Code coverage is acceptable."
+            echo "::error::Coverage summary not found: $COVERAGE_FILE"
+            exit 1
           fi
         working-directory: ${{ inputs.project_path }}
 
-      - name: Upload Reports
+      - name: Upload LCOV HTML Report
         uses: actions/upload-artifact@v4
         with:
           name: Angular-Coverage-HTML
@@ -149,7 +156,7 @@ jobs:
           chmod +x codacy-coverage-reporter
           ./codacy-coverage-reporter report \
             --project-token="${{ env.CODACY_PROJECT_TOKEN }}" \
-            --coverage-reports="${{ inputs.project_path }}/coverage/angular.io-example/coverage/lcov.info"
+            --coverage-reports="${{ inputs.project_path }}/coverage/lcov.info"
         env:
           CODACY_PROJECT_TOKEN: ${{ secrets.CODACY_PROJECT_TOKEN }}
         working-directory: ${{ inputs.project_path }}
