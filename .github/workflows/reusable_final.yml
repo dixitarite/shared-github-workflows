@@ -225,13 +225,24 @@ jobs:
     needs: coverage
     steps:
       - uses: actions/checkout@v4
-      - run: |
+  
+      - name: Install SonarQube CLI
+        run: |
+          echo "📥 Installing SonarQube CLI..."
+          wget https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-5.0.1.3006-linux.zip
+          unzip sonar-scanner-cli-5.0.1.3006-linux.zip
+          sudo mv sonar-scanner-5.0.1.3006-linux /opt/sonar-scanner
+          sudo ln -s /opt/sonar-scanner/bin/sonar-scanner /usr/local/bin/sonar-scanner
+  
+      - name: Run SonarQube Scan
+        run: |
           if [ -n "${{ secrets.SONAR_TOKEN }}" ]; then
             echo "🔍 Running SonarQube scan..."
             sonar-scanner -Dsonar.login="${{ secrets.SONAR_TOKEN }}"
           else
             echo "::warning::No SONAR_TOKEN set. Skipping scan."
           fi
+
 
   codacy:
     name: Upload Coverage to Codacy
