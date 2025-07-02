@@ -127,7 +127,7 @@ jobs:
 
       - name: Generate HTML Coverage Report
         run: |
-          genhtml coverage/angular.io-example/coverage/lcov.info \
+          genhtml coverage/lcov.info \
             --output-directory test-results/lcov-html \
             --title "Angular Test Coverage Report" \
             --show-details \
