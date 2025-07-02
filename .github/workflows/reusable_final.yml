@@ -39,12 +39,6 @@ jobs:
         with:
           node-version: ${{ steps.setvars.outputs.node_version }}
 
-      - name: Cache node modules
-        uses: actions/cache@v3
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-
       - name: Install Dependencies
         run: npm install
         working-directory: ${{ inputs.project_path }}
@@ -57,23 +51,8 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ needs.setup.outputs.node_version }}
-
-      - name: Cache node modules
-        uses: actions/cache@v3
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-
-      - name: Install Dependencies
-        run: npm install
-        working-directory: ${{ inputs.project_path }}
-
       - name: Lint Code with ESLint
-        run: npm run lint
+        run: npx eslint . --ext .ts --config eslint.config.cjs --no-warn-ignored --max-warnings=0 --ignore-pattern coverage/
         working-directory: ${{ inputs.project_path }}
 
   test:
@@ -83,6 +62,10 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+
+      - name: Prepare test-results folder
+        run: mkdir -p test-results
+        working-directory: ${{ inputs.project_path }}
 
       - name: Run Tests
         run: |
@@ -96,8 +79,13 @@ jobs:
           sudo apt-get install -y lcov python3-pip
           pip3 install junit2html
 
-      - name: Convert JUnit XML to HTML
-        run: junit2html test-results/test-results.xml test-results/test-report.html
+      - name: Convert JUnit XML to HTML (if exists)
+        run: |
+          if [ -f "test-results/test-results.xml" ]; then
+            junit2html test-results/test-results.xml test-results/test-report.html
+          else
+            echo "::warning::JUnit XML file not found. Skipping HTML conversion."
+          fi
         working-directory: ${{ inputs.project_path }}
 
       - name: Check CRITICAL Test Failures
