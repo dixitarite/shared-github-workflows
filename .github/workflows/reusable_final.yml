@@ -120,6 +120,18 @@ jobs:
           name: raw-coverage
           path: ${{ inputs.project_path }}/coverage/
 
+      - name: Upload JUnit XML Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: Angular-JUnit-XML
+          path: ${{ inputs.project_path }}/test-results/test-results.xml
+
+      - name: Upload JUnit HTML Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: Angular-JUnit-HTML
+          path: ${{ inputs.project_path }}/test-results/test-report.html
+
   coverage:
     name: Enforce Coverage Threshold & Report
     runs-on: ubuntu-latest
@@ -193,6 +205,20 @@ jobs:
         env:
           COVERAGE_THRESHOLD: ${{ inputs.coverage_threshold || vars.COVERAGE_THRESHOLD }}
         working-directory: ${{ inputs.project_path }}
+
+      - name: Upload Coverage Directory
+        uses: actions/upload-artifact@v4
+        with:
+          name: Angular-Raw-Coverage
+          path: ${{ inputs.project_path }}/coverage/
+
+      - name: Upload Coverage HTML Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: Angular-Coverage-HTML
+          path: ${{ inputs.project_path }}/test-results/lcov-html/
+
+
 
   report:
     name: Upload Reports
