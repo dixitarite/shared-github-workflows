@@ -75,6 +75,12 @@ jobs:
           echo "Tests completed."
           find . -name "test-results.xml" || echo "test-results.xml not found"
         working-directory: ${{ inputs.project_path }}
+     
+      - name: DEBUG — Locate Coverage Output
+        run: |
+          echo "🔍 Searching for coverage files..."
+          find . -type f -name "lcov.info"
+        working-directory: ${{ inputs.project_path }}
 
       - name: Install Coverage Tools
         run: |
