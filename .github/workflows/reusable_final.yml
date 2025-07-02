@@ -153,18 +153,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y lcov
 
-      - name: Re-run ng test for coverage if needed
-        run: |
-          echo "🔁 Re-running Angular tests to regenerate coverage..."
-          npx ng test --code-coverage --watch=false --browsers=ChromeHeadless --karma-config=karma.conf.js || true
-        working-directory: ${{ inputs.project_path }}
-      
-      - name: Debug Coverage Paths
-        run: |
-          echo "🔎 Listing files inside coverage directory:"
-          find coverage -type f || echo "coverage directory not found"
-        working-directory: ${{ inputs.project_path }}
-
       - name: Generate HTML Coverage Report
         run: |
           genhtml ./coverage/lcov.info \
@@ -221,7 +209,7 @@ jobs:
   
       - name: Install SonarQube CLI
         run: |
-          echo "📥 Installing SonarQube CLI..."
+          echo "Installing SonarQube CLI..."
           wget https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-5.0.1.3006-linux.zip
           unzip sonar-scanner-cli-5.0.1.3006-linux.zip
           sudo mv sonar-scanner-5.0.1.3006-linux /opt/sonar-scanner
@@ -230,7 +218,7 @@ jobs:
       - name: Run SonarQube Scan
         run: |
           if [ -n "${{ secrets.SONAR_TOKEN }}" ]; then
-            echo "🔍 Running SonarQube scan..."
+            echo "Running SonarQube scan..."
             sonar-scanner \
               -Dsonar.login=${{ secrets.SONAR_TOKEN }} \
               -Dsonar.host.url=https://sonarcloud.io
