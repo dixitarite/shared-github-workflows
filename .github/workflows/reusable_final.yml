@@ -250,6 +250,13 @@ jobs:
     needs: coverage
     steps:
       - uses: actions/checkout@v4
+  
+      - name: Download Coverage Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: raw-coverage
+          path: ${{ inputs.project_path }}/coverage
+  
       - run: |
           if [ -n "${{ secrets.CODACY_PROJECT_TOKEN }}" ]; then
             echo "📤 Uploading coverage to Codacy..."
@@ -262,6 +269,7 @@ jobs:
             echo "::warning::No CODACY_PROJECT_TOKEN set. Skipping Codacy upload."
           fi
         working-directory: ${{ inputs.project_path }}
+
 
   build:
     name: Build Angular App
